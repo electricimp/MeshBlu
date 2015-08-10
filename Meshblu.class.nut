@@ -3,12 +3,10 @@ class Meshblu {
     static version = [1, 0, 0];
 
     static NO_CREDENTIALS_ERR = "ERROR: Meshblu Credentials Missing";
-    static CREDENTIALS_ERR = "ERROR: Device already has MeshBlu Credentials";
-    static RESP_ERR = "Error communicating with MeshBlu";
+    static CREDENTIALS_ERR = "ERROR: Device already has Meshblu Credentials";
+    static RESP_ERR = "Error communicating with Meshblu";
 
     _baseUrl = "https://meshblu.octoblu.com"
-    _token = null;
-    _uuid = null;
     _headers = null;
     _properties = null;
     _streamingRequest = null;
@@ -18,13 +16,11 @@ class Meshblu {
         _headers = {"Content-Type" : "application/json"};
 
         if("token" in properties) {
-            _token = properties.token;
-            _headers.meshblu_auth_token <- _token;
+            _headers.meshblu_auth_token <- _properties.token;
         }
 
         if("uuid" in properties) {
-            _uuid = properties.uuid;
-            _headers.meshblu_auth_uuid <- _uuid;
+            _headers.meshblu_auth_uuid <- _properties.uuid;
         }
     }
 
@@ -72,7 +68,7 @@ class Meshblu {
     // Gets this device info
     function getDeviceInfo(uuid, cb) {
         if(!_deviceRegistered()) {
-            imp.wakeup(0, function() { cb(NO_CREDENTIALS_ERR, null, null); });
+            imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
         } else {
             local url = format("%s/devices/%s", _baseUrl, uuid);
             local request = http.get(url, _headers);
@@ -184,7 +180,7 @@ class Meshblu {
     // Send a message to a specific device, array of devices, or all devices subscribing to a UUID on the Meshblu platform
     function sendMessage(device, message, cb = null) {
         if( !_deviceRegistered() ) {
-            if(cb) imp.wakeup(0, function() { cb(NO_CREDENTIALS_ERR, null, null); });
+            if(cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
         } else {
             local d = { "devices" : device, "payload" : message };
             local url = format("%s/messages", _baseUrl);
@@ -196,7 +192,7 @@ class Meshblu {
     // subscribe to device
     function subscribe(uuid, cb, filter=null) {
         if( !_deviceRegistered() ) {
-            if(cb) imp.wakeup(0, function() { cb(NO_CREDENTIALS_ERR, null, null); });
+            if(cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
         } else {
             local url = format("%s/subscribe/%s", _baseUrl, uuid);
             if(filter) { url = format("%s/subscribe/%s%s", _baseUrl, uuid, filter); }
@@ -232,28 +228,32 @@ class Meshblu {
     // Sets the internally stored credentials
     function setDeviceCredentials(uuid, token) {
         // Set the token
-        _token = token;
-        _headers.meshblu_auth_token <- _token;
+        _properties.token <- token;
+        _headers.meshblu_auth_token <- token;
 
         // Set the UUID
-        _uuid = uuid;
-        _headers.meshblu_auth_uuid <- _uuid;
+        _properties.uuid <- uuid;
+        _headers.meshblu_auth_uuid <- uuid;
     }
 
 
     // Gets the internally stored credentials
     function getDeviceCredentials() {
-        return {
-            "uuid": _properties.uuid,
-            "token": _properties.token
-        };
+        if (_deviceRegistered()) {
+            return {
+                "uuid": _properties.uuid,
+                "token": _properties.token
+            };
+        } else {
+            return {};
+        }
     }
 
     /////////////////// PRIVATE FUNCTIONS - DO NOT CALL ///////////////
 
     function _updateProperties(newProps) {
         foreach (prop, val in newProps) {
-            _properties[prop] = val;
+            _properties[prop] <- val;
         }
     }
 
@@ -263,19 +263,19 @@ class Meshblu {
 
     function _updateLocalCredentials(uuid, token) {
         if(uuid) {
-            _uuid = uuid;
-            _headers.meshblu_auth_uuid <- _uuid;
+            _properties.uuid <- uuid;
+            _headers.meshblu_auth_uuid <- uuid;
         }
         if(token) {
-            _token = token;
-            _headers.meshblu_auth_token <- _token;
+            _properties.token <- token;
+            _headers.meshblu_auth_token <- token;
         }
     }
 
     function _removeLocalCredentials() {
         // remove locally stored uuid & token
-        _properties.rawDelete("uuid");
-        _properties.rawDelete("token");
+        _properties.rawdelete("uuid");
+        _properties.rawdelete("token");
         _headers = {"Content-Type" : "application/json"};
     }
 

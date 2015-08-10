@@ -60,6 +60,9 @@ properties <- {
 
 // Create the device object
 meshblu <- Meshblu(properties);
+
+// Sync local and Meshblu properties
+// (see updateDevice(properties) below)
 ```
 
 ## Class Methods
@@ -186,6 +189,9 @@ meshblu.storeData(data, function(err, response, data) {
     if(err) {
         server.log(err);
         return;
+    }
+    if(data == "") {
+        server.log("Data Stored");
     }
 });
 ```
