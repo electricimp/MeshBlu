@@ -91,6 +91,24 @@ if (!("uuid" in deviceData && "token" in deviceData)) {
 }
 ```
 
+### getDeviceCredentials()
+The *getDeviceCredentials* method returns the device's locally stored credentials.
+
+```squirrel
+local creds = meshblu.getDeviceCredentials();
+server.log(http.jsonencode(creds));
+```
+
+### setDeviceCredentials(*uuid, token*)
+The *setDeviceCredentials* method stores the uuid and token locally.
+
+```squirrel
+meshblu.setDeviceCredentials("b11f10f4-4093-4a29-afe3-ca27970b2725", "c6be147fcc21df7c8c756b0fca0a2caf04a9b0e0");
+
+local creds = meshblu.getDeviceCredentials();
+server.log(http.jsonencode(creds));
+```
+
 ### getDeviceInfo(*uuid, cb*)
 The *getDeviceInfo* method requests all information (except the token) for the specified device.
 
