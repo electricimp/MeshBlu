@@ -226,15 +226,8 @@ class Meshblu {
 
     // Sets the internally stored credentials
     function setDeviceCredentials(uuid, token) {
-        // Set the token
-        _token <- token;
-        _headers.meshblu_auth_token <- _token;
-
-        // Set the UUID
-        _uuid <- uuid;
-        _headers.meshblu_auth_uuid <- _uuid;
+        _updateLocalCredentials(uuid, token);
     }
-
 
     // Gets the internally stored credentials
     function getDeviceCredentials() {
@@ -270,11 +263,11 @@ class Meshblu {
 
     function _updateLocalCredentials(uuid, token) {
         if(uuid) {
-            _uuid <- uuid;
+            _uuid = uuid;
             _headers.meshblu_auth_uuid <- _uuid;
         }
         if(token) {
-            _token <- token;
+            _token = token;
             _headers.meshblu_auth_token <- _token;
         }
     }
