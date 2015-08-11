@@ -7,6 +7,8 @@ class Meshblu {
     static RESP_ERR = "Error communicating with Meshblu";
 
     _baseUrl = "https://meshblu.octoblu.com"
+    _uuid = null;
+    _token = null;
     _headers = null;
     _properties = null;
     _streamingRequest = null;
@@ -15,12 +17,9 @@ class Meshblu {
         _properties = properties;
         _headers = {"Content-Type" : "application/json"};
 
-        if("token" in properties) {
-            _headers.meshblu_auth_token <- _properties.token;
-        }
-
-        if("uuid" in properties) {
-            _headers.meshblu_auth_uuid <- _properties.uuid;
+        if("token" in _properties && "uuid" in _properties) {
+            _updateLocalCredentials(_properties.uuid, _properties.token);
+            _deleteCredentialsFromPropperties();
         }
     }
 
@@ -82,7 +81,7 @@ class Meshblu {
             if (cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
         } else {
             _updateProperties(newProps);
-            local url = format("%s/devices/%s", _baseUrl, _properties.uuid);
+            local url = format("%s/devices/%s", _baseUrl, _uuid);
             local request = http.put(url, _headers, http.jsonencode(_properties));
             _sendRequest(request, cb);
         }
@@ -93,7 +92,7 @@ class Meshblu {
         if( !_deviceRegistered() ) {
             if (cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
         } else {
-            local url = format("%s/devices/%s", _baseUrl, _properties.uuid);
+            local url = format("%s/devices/%s", _baseUrl, _uuid);
             local request = http.httpdelete(url, _headers);
 
             request.sendasync(function(resp) {
@@ -144,7 +143,7 @@ class Meshblu {
         if( !_deviceRegistered() ) {
             if(cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
         } else {
-            local url = format("%s/data/%s", _baseUrl, _properties.uuid);
+            local url = format("%s/data/%s", _baseUrl, _uuid);
             local request = http.post(url, _headers, http.jsonencode(devData));
 
             request.sendasync(function(resp) {
@@ -228,12 +227,12 @@ class Meshblu {
     // Sets the internally stored credentials
     function setDeviceCredentials(uuid, token) {
         // Set the token
-        _properties.token <- token;
-        _headers.meshblu_auth_token <- token;
+        _token <- token;
+        _headers.meshblu_auth_token <- _token;
 
         // Set the UUID
-        _properties.uuid <- uuid;
-        _headers.meshblu_auth_uuid <- uuid;
+        _uuid <- uuid;
+        _headers.meshblu_auth_uuid <- _uuid;
     }
 
 
@@ -241,8 +240,8 @@ class Meshblu {
     function getDeviceCredentials() {
         if (_deviceRegistered()) {
             return {
-                "uuid": _properties.uuid,
-                "token": _properties.token
+                "uuid": _uuid,
+                "token": _token
             };
         } else {
             return {};
@@ -252,30 +251,43 @@ class Meshblu {
     /////////////////// PRIVATE FUNCTIONS - DO NOT CALL ///////////////
 
     function _updateProperties(newProps) {
+        if("uuid" in newProps) {
+            _updateLocalCredentials(uuid.newProps, null);
+            newProps.rawdelete("uuid");
+        }
+        if("token" in newProps) {
+            _updateLocalCredentials(null, token.newProps);
+            newProps.rawdelete("token");
+        }
         foreach (prop, val in newProps) {
             _properties[prop] <- val;
         }
     }
 
     function _deviceRegistered() {
-        return ("uuid" in _properties && "token" in _properties);
+        return (_uuid != null && _token != null);
     }
 
     function _updateLocalCredentials(uuid, token) {
         if(uuid) {
-            _properties.uuid <- uuid;
-            _headers.meshblu_auth_uuid <- uuid;
+            _uuid <- uuid;
+            _headers.meshblu_auth_uuid <- _uuid;
         }
         if(token) {
-            _properties.token <- token;
-            _headers.meshblu_auth_token <- token;
+            _token <- token;
+            _headers.meshblu_auth_token <- _token;
         }
+    }
+
+    function _deleteCredentialsFromPropperties() {
+        _properties.rawdelete("uuid");
+        _properties.rawdelete("token");
     }
 
     function _removeLocalCredentials() {
         // remove locally stored uuid & token
-        _properties.rawdelete("uuid");
-        _properties.rawdelete("token");
+        _uuid = null;
+        _token = null;
         _headers = {"Content-Type" : "application/json"};
     }
 
