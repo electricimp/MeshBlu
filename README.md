@@ -13,7 +13,7 @@ You can view the library’s source code on [GitHub](https://github.com/electric
 All requests made to the MeshBlu are done asynchronously, and take an optional callback parameter. The callback function should take three parameters: *err*, *resp*, and *data*.
 
 - **err**: A string describing the error, or `null` if the request was successful.
-- **resp**: The [HTTP response table](electricimp.com/docs/api/httprequest/sendasync).
+- **resp**: The [HTTP response table](https://electricimp.com/docs/api/httprequest/sendasync).
 - **data**: The decoded body of the HTTP request.
 
 ### Constructor: Meshblu(*[properties]*)
