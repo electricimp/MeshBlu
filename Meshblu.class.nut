@@ -2,8 +2,8 @@ class Meshblu {
 
     static version = [1, 0, 0];
 
-    static NO_CREDENTIALS_ERR = "ERROR: Meshblu Credentials Missing";
-    static CREDENTIALS_ERR = "ERROR: Device already has Meshblu Credentials";
+    static NO_CREDENTIALS_ERR = "Meshblu Credentials Missing";
+    static CREDENTIALS_ERR = "Device already has Meshblu Credentials";
     static RESP_ERR = "Error communicating with Meshblu";
 
     _baseUrl = "https://meshblu.octoblu.com"
@@ -14,13 +14,11 @@ class Meshblu {
     _streamingRequest = null;
 
     constructor (properties = {}) {
-        _properties = properties;
+        // Set the initial header
         _headers = {"Content-Type" : "application/json"};
 
-        if("token" in _properties && "uuid" in _properties) {
-            _updateLocalCredentials(_properties.uuid, _properties.token);
-            _deleteCredentialsFromPropperties();
-        }
+        // Add all the properties passed in
+        _updateProperties(properties);
     }
 
     // Register a device with Meshblu (only if no credentials passed in)
@@ -30,7 +28,7 @@ class Meshblu {
         } else {
             local url = format("%s/devices", _baseUrl);
             local request = http.post(url, _headers, http.jsonencode(_properties));
-            local error = "ERROR: Could not register device"
+            local error = "Could not register device"
 
             request.sendasync(function(resp) {
                 local data = {};
@@ -46,7 +44,7 @@ class Meshblu {
 
                 // check status code
                 if (resp.statuscode != 201) {
-                    err = (format("ERROR: Could not register device (%s)", resp.statuscode.tostring()));
+                    err = (format("Could not register device (%s)", resp.statuscode.tostring()));
                     imp.wakeup(0, function() { cb(err, resp, data); });
                     return
                 }
@@ -55,7 +53,7 @@ class Meshblu {
                 if("uuid" in data && "token" in data) {
                     _updateLocalCredentials(data.uuid, data.token);
                 } else {
-                    err = "ERROR: Credentials not sent";
+                    err = "Credentials not sent";
                 }
 
                 // your callback should to store the tokens for future access to your device
@@ -109,7 +107,7 @@ class Meshblu {
 
                 // check status code
                 if (resp.statuscode != 200) {
-                    err = (format("ERROR: Could not delete device (%s)", resp.statuscode.tostring()));
+                    err = (format("Could not delete device (%s)", resp.statuscode.tostring()));
                     if(cb) imp.wakeup(0, function() { cb(err, resp, data); });
                     return
                 }
@@ -150,7 +148,7 @@ class Meshblu {
                 local err = null;
 
                 if (resp.statuscode != 201) {
-                    err = format("ERROR: Could not store data (%s)", resp.statuscode.tostring());
+                    err = format("Could not store data (%s)", resp.statuscode.tostring());
                     if(cb) imp.wakeup(0, function() { cb(err, resp, resp.body); });
                 } else {
                     if(cb) imp.wakeup(0, function() { cb(null, resp, resp.body); });
@@ -246,15 +244,16 @@ class Meshblu {
     function _updateProperties(newProps) {
         if("uuid" in newProps) {
             _updateLocalCredentials(uuid.newProps, null);
-            newProps.rawdelete("uuid");
         }
         if("token" in newProps) {
             _updateLocalCredentials(null, token.newProps);
-            newProps.rawdelete("token");
         }
         foreach (prop, val in newProps) {
             _properties[prop] <- val;
         }
+
+        // Delete the uuid & token credentials from the _properties table
+        _deleteCredentialsFromPropperties();
     }
 
     function _deviceRegistered() {
@@ -281,7 +280,7 @@ class Meshblu {
         // remove locally stored uuid & token
         _uuid = null;
         _token = null;
-        _headers = {"Content-Type" : "application/json"};
+        _headers = { "Content-Type" : "application/json" };
     }
 
     function _sendRequest(request, cb, statusCode=200) {
