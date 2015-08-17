@@ -250,7 +250,7 @@ class Meshblu {
         if (_deviceRegistered()) {
             return { "uuid": _uuid, "token": _token };
         } else {
-            return {};
+            return null;
         }
     }
 

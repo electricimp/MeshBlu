@@ -92,11 +92,15 @@ if (!("uuid" in deviceData && "token" in deviceData)) {
 ```
 
 ### getDeviceCredentials()
-The *getDeviceCredentials* method returns the device's locally stored credentials.
+The *getDeviceCredentials* method returns the device's locally stored credentials. If there are no stored credentials, this methods returns null.
 
 ```squirrel
 local creds = meshblu.getDeviceCredentials();
-server.log(http.jsonencode(creds));
+if (creds) {
+    server.log(http.jsonencode(creds));
+} else {
+    server.log("No credentials");
+}
 ```
 
 ### setDeviceCredentials(*uuid, token*)
