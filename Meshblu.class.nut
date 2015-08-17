@@ -23,109 +23,120 @@ class Meshblu {
 
     // Register a device with Meshblu (only if no credentials passed in)
     function registerDevice(cb) {
-        if( _deviceRegistered() ) {
+        // Ensure we're not registered
+        if(_deviceRegistered() ) {
             imp.wakeup(0, function() { cb(Meshblu.CREDENTIALS_ERR, null, null); });
-        } else {
-            local url = format("%s/devices", _baseUrl);
-            local request = http.post(url, _headers, http.jsonencode(_properties));
-            local error = "Could not register device"
-
-            request.sendasync(function(resp) {
-                local data = {};
-                local err = null;
-
-                // decode data
-                try {
-                    data = http.jsondecode(resp.body);
-                } catch (ex) {
-                    imp.wakeup(0, function() { cb(ex, resp, null); });
-                    return
-                }
-
-                // check status code
-                if (resp.statuscode != 201) {
-                    err = (format("Could not register device (%s)", resp.statuscode.tostring()));
-                    imp.wakeup(0, function() { cb(err, resp, data); });
-                    return
-                }
-
-                // check that credentials were returned
-                if("uuid" in data && "token" in data) {
-                    _updateLocalCredentials(data.uuid, data.token);
-                } else {
-                    err = "Credentials not sent";
-                }
-
-                // your callback should to store the tokens for future access to your device
-                imp.wakeup(0, function() { cb(err, resp, data); });
-            }.bindenv(this));
+            return;
         }
+
+        local url = format("%s/devices", _baseUrl);
+        local request = http.post(url, _headers, http.jsonencode(_properties));
+        local error = "Could not register device"
+
+        request.sendasync(function(resp) {
+            local data = {};
+            local err = null;
+
+            // decode data
+            try {
+                data = http.jsondecode(resp.body);
+            } catch (ex) {
+                imp.wakeup(0, function() { cb(ex, resp, null); });
+                return
+            }
+
+            // check status code
+            if (resp.statuscode != 201) {
+                err = (format("Could not register device (%s)", resp.statuscode.tostring()));
+                imp.wakeup(0, function() { cb(err, resp, data); });
+                return
+            }
+
+            // check that credentials were returned
+            if("uuid" in data && "token" in data) {
+                _updateLocalCredentials(data.uuid, data.token);
+            } else {
+                err = "Credentials not sent";
+            }
+
+            // your callback should to store the tokens for future access to your device
+            imp.wakeup(0, function() { cb(err, resp, data); });
+        }.bindenv(this));
     }
 
     // Gets this device info
     function getDeviceInfo(uuid, cb) {
+        // Ensure we're registered
         if(!_deviceRegistered()) {
             imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
-        } else {
-            local url = format("%s/devices/%s", _baseUrl, uuid);
-            local request = http.get(url, _headers);
-            _sendRequest(request, cb);
+            return;
         }
+
+        local url = format("%s/devices/%s", _baseUrl, uuid);
+        local request = http.get(url, _headers);
+        _sendRequest(request, cb);
     }
 
     // Update properties of a specific device
     function updateDevice(newProps, cb = null) {
+        // Ensure we're registered
         if (!_deviceRegistered()) {
             if (cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
-        } else {
-            _updateProperties(newProps);
-            local url = format("%s/devices/%s", _baseUrl, _uuid);
-            local request = http.put(url, _headers, http.jsonencode(_properties));
-            _sendRequest(request, cb);
+            return;
         }
+
+        _updateProperties(newProps);
+        local url = format("%s/devices/%s", _baseUrl, _uuid);
+        local request = http.put(url, _headers, http.jsonencode(_properties));
+        _sendRequest(request, cb);
     }
 
     // Delete device from meshblu network
     function deleteDevice(cb = null) {
+        // Ensure we're registered
         if( !_deviceRegistered() ) {
             if (cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
-        } else {
-            local url = format("%s/devices/%s", _baseUrl, _uuid);
-            local request = http.httpdelete(url, _headers);
-
-            request.sendasync(function(resp) {
-                local data = {};
-                local err = null;
-
-                // decode data
-                try {
-                    data = http.jsondecode(resp.body);
-                } catch (ex) {
-                    if (cb) imp.wakeup(0, function() { cb(ex, resp, null); });
-                    return
-                }
-
-                // check status code
-                if (resp.statuscode != 200) {
-                    err = (format("Could not delete device (%s)", resp.statuscode.tostring()));
-                    if(cb) imp.wakeup(0, function() { cb(err, resp, data); });
-                    return
-                }
-
-                _removeLocalCredentials();
-                if(cb) imp.wakeup(0, function() { cb(err, resp, data); });
-            }.bindenv(this));
+            return;
         }
+
+        local url = format("%s/devices/%s", _baseUrl, _uuid);
+        local request = http.httpdelete(url, _headers);
+
+        request.sendasync(function(resp) {
+            local data = {};
+            local err = null;
+
+            // decode data
+            try {
+                data = http.jsondecode(resp.body);
+            } catch (ex) {
+                if (cb) imp.wakeup(0, function() { cb(ex, resp, null); });
+                return
+            }
+
+            // check status code
+            if (resp.statuscode != 200) {
+                err = (format("Could not delete device (%s)", resp.statuscode.tostring()));
+                if(cb) imp.wakeup(0, function() { cb(err, resp, data); });
+                return
+            }
+
+            _removeLocalCredentials();
+            if(cb) imp.wakeup(0, function() { cb(err, resp, data); });
+        }.bindenv(this));
+
     }
 
     function getLocalDevices(cb) {
-         if( !_deviceRegistered() ) {
+        // Ensure we're registered
+        if( !_deviceRegistered() ) {
             imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
-        } else {
-            local url = format("%s/localdevices", _baseUrl);
-            local request = http.get(url, _headers);
-            _sendRequest(request, cb);
+            return;
         }
+
+        local url = format("%s/localdevices", _baseUrl);
+        local request = http.get(url, _headers);
+        _sendRequest(request, cb);
     }
 
     function online(cb = null) {
@@ -138,35 +149,38 @@ class Meshblu {
 
     // data should be in key:value pairs
     function storeData(devData, cb = null) {
+        // Ensure we're registered
         if( !_deviceRegistered() ) {
             if(cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
-        } else {
-            local url = format("%s/data/%s", _baseUrl, _uuid);
-            local request = http.post(url, _headers, http.jsonencode(devData));
-
-            request.sendasync(function(resp) {
-                local err = null;
-
-                if (resp.statuscode != 201) {
-                    err = format("Could not store data (%s)", resp.statuscode.tostring());
-                    if(cb) imp.wakeup(0, function() { cb(err, resp, resp.body); });
-                } else {
-                    if(cb) imp.wakeup(0, function() { cb(null, resp, resp.body); });
-                }
-            }.bindenv(this));
+            return;
         }
+        local url = format("%s/data/%s", _baseUrl, _uuid);
+        local request = http.post(url, _headers, http.jsonencode(devData));
+
+        request.sendasync(function(resp) {
+            local err = null;
+
+            if (resp.statuscode != 201) {
+                err = format("Could not store data (%s)", resp.statuscode.tostring());
+                if(cb) imp.wakeup(0, function() { cb(err, resp, resp.body); });
+            } else {
+                if(cb) imp.wakeup(0, function() { cb(null, resp, resp.body); });
+            }
+        }.bindenv(this));
     }
 
     // TODO: add query params
     function getData(uuid, cb, stream = false) {
+        // Ensure we're registered
         if( !_deviceRegistered() ) {
             imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
-        } else {
-            local url = format("%s/data/%s", _baseUrl, uuid);
-            if(stream) { url = format("%s/data/%s?stream=true", _baseUrl, uuid); }
-            local request = http.get(url, _headers);
-            _sendRequest(request, cb);
+            return;
         }
+
+        local url = format("%s/data/%s", _baseUrl, uuid);
+        if(stream) { url = format("%s/data/%s?stream=true", _baseUrl, uuid); }
+        local request = http.get(url, _headers);
+        _sendRequest(request, cb);
     }
 
     // must be subscribed to get data stream
@@ -176,26 +190,30 @@ class Meshblu {
 
     // Send a message to a specific device, array of devices, or all devices subscribing to a UUID on the Meshblu platform
     function sendMessage(device, message, cb = null) {
+        // Ensure we're registered
         if( !_deviceRegistered() ) {
             if(cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
-        } else {
-            local d = { "devices" : device, "payload" : message };
-            local url = format("%s/messages", _baseUrl);
-            local request = http.post(url, _headers, http.jsonencode(d));
-            _sendRequest(request, cb);
+            return;
         }
+
+        local d = { "devices" : device, "payload" : message };
+        local url = format("%s/messages", _baseUrl);
+        local request = http.post(url, _headers, http.jsonencode(d));
+        _sendRequest(request, cb);
     }
 
     // subscribe to device
     function subscribe(uuid, cb, filter=null) {
+        // Ensure we're registered
         if( !_deviceRegistered() ) {
             if(cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
-        } else {
-            local url = format("%s/subscribe/%s", _baseUrl, uuid);
-            if(filter) { url = format("%s/subscribe/%s%s", _baseUrl, uuid, filter); }
-
-            _openStream(url, cb);
+            return;
         }
+
+        local url = format("%s/subscribe/%s", _baseUrl, uuid);
+        if(filter) { url = format("%s/subscribe/%s%s", _baseUrl, uuid, filter); }
+
+        _openStream(url, cb);
     }
 
     // types (broadcast, received, sent, or [broadcast, received])
@@ -230,16 +248,17 @@ class Meshblu {
     // Gets the internally stored credentials
     function getDeviceCredentials() {
         if (_deviceRegistered()) {
-            return {
-                "uuid": _uuid,
-                "token": _token
-            };
+            return { "uuid": _uuid, "token": _token };
         } else {
             return {};
         }
     }
 
-    /////////////////// PRIVATE FUNCTIONS - DO NOT CALL ///////////////
+    //--------------- PRIVATE FUNCTIONS - DO NOT CALL ---------------//
+
+    function _deviceRegistered() {
+        return (_uuid != null && _token != null);
+    }
 
     function _updateProperties(newProps) {
         if("uuid" in newProps) {
@@ -256,8 +275,9 @@ class Meshblu {
         _deleteCredentialsFromPropperties();
     }
 
-    function _deviceRegistered() {
-        return (_uuid != null && _token != null);
+    function _deleteCredentialsFromPropperties() {
+        _properties.rawdelete("uuid");
+        _properties.rawdelete("token");
     }
 
     function _updateLocalCredentials(uuid, token) {
@@ -269,11 +289,6 @@ class Meshblu {
             _token = token;
             _headers.meshblu_auth_token <- _token;
         }
-    }
-
-    function _deleteCredentialsFromPropperties() {
-        _properties.rawdelete("uuid");
-        _properties.rawdelete("token");
     }
 
     function _removeLocalCredentials() {
