@@ -53,8 +53,8 @@ impID <- split(http.agenturl(), "/").pop();
 properties <- {
     "impID" : impID,
     "platform" : "Electric Imp",
-    "uuid" : "<-- AUTH_ID-->",
-    "token" : "<--AUTH_TOKEN -->",
+    "uuid" : "<-- AUTH_ID -->",
+    "token" : "<-- AUTH_TOKEN -->",
     "online" : true
 };
 
