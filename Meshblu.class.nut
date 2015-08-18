@@ -17,6 +17,9 @@ class Meshblu {
         // Set the initial header
         _headers = {"Content-Type" : "application/json"};
 
+        // Create a _properties table
+        _properties = {};
+
         // Add all the properties passed in
         _updateProperties(properties);
     }
@@ -79,13 +82,15 @@ class Meshblu {
 
     // Update properties of a specific device
     function updateDevice(newProps, cb = null) {
+        // update Properties
+        _updateProperties(newProps);
+
         // Ensure we're registered
         if (!_deviceRegistered()) {
             if (cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
             return;
         }
 
-        _updateProperties(newProps);
         local url = format("%s/devices/%s", _baseUrl, _uuid);
         local request = http.put(url, _headers, http.jsonencode(_properties));
         _sendRequest(request, cb);
@@ -262,10 +267,10 @@ class Meshblu {
 
     function _updateProperties(newProps) {
         if("uuid" in newProps) {
-            _updateLocalCredentials(uuid.newProps, null);
+            _updateLocalCredentials(newProps.uuid, null);
         }
         if("token" in newProps) {
-            _updateLocalCredentials(null, token.newProps);
+            _updateLocalCredentials(null, newProps.token);
         }
         foreach (prop, val in newProps) {
             _properties[prop] <- val;
