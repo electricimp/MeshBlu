@@ -1,6 +1,10 @@
+// Copyright (c) 2016 Electric Imp
+// This file is licensed under the MIT License
+// http://opensource.org/licenses/MIT
+
 class Meshblu {
 
-    static version = [1, 0, 0];
+    static version = [1, 1, 0];
 
     static NO_CREDENTIALS_ERR = "Meshblu Credentials Missing";
     static CREDENTIALS_ERR = "Device already has Meshblu Credentials";
@@ -121,7 +125,7 @@ class Meshblu {
 
             // check status code
             if (resp.statuscode != 200) {
-                err = (format("Could not delete device (%s)", resp.statuscode.tostring()));
+                err = format("Could not delete device (%d)", resp.statuscode);
                 if(cb) imp.wakeup(0, function() { cb(err, resp, data); });
                 return
             }
@@ -189,8 +193,8 @@ class Meshblu {
     }
 
     // must be subscribed to get data stream
-    function getStreamingData(uuid) {
-        getData(uuid, null, true);
+    function getStreamingData(uuid, cb = null) {
+        getData(uuid, cb, true);
     }
 
     // Send a message to a specific device, array of devices, or all devices subscribing to a UUID on the Meshblu platform
@@ -277,10 +281,10 @@ class Meshblu {
         }
 
         // Delete the uuid & token credentials from the _properties table
-        _deleteCredentialsFromPropperties();
+        _deleteCredentialsFromProperties();
     }
 
-    function _deleteCredentialsFromPropperties() {
+    function _deleteCredentialsFromProperties() {
         _properties.rawdelete("uuid");
         _properties.rawdelete("token");
     }
@@ -325,35 +329,54 @@ class Meshblu {
         }.bindenv(this));
     }
 
-    function _openStream(url, cb, reconnect=true, streamingRetryTimeout = 10.0) {
+    function _openStream(url, cb, reconnect=true) {
         if(_streamingRequest != null) {
             _streamingRequest.cancel();
             _streamingRequest = null;
         }
+        
         _streamingRequest = http.get(url, _headers);
+        _streamingRequest.sendasync(
+            
+            // The final HTTP stream handler
+            function (resp) {
+                if (reconnect) { _openStream(url, cb, reconnect); }
+            }.bindenv(this), 
+            
+            // The interim HTTP stream data handler
+            function (data) {
 
-        _streamingRequest.sendasync(function(resp) {
-            if (reconnect) { _openStream(url, cb, true); }
-        }.bindenv(this), function(data) {
-            local decodedData = null;
-            local err = null;
-
-            try {
-                decodedData = http.jsondecode(data);
-            } catch (ex) {
-                // if stream listening to multiple subscribe types
-                // data includes multiple responses separated by a new line
-                try {
-                    decodedData = split(data, "\n\r");
-                    foreach(index, response in decodedData) {
-                        decodedData[index] = http.jsondecode(response);
-                    }
-                } catch (ex) {
-                    err = ex;
+                // Skip over HTML as it's an error message                
+                if (data.find("<html>") == 0) {
+                    return;
                 }
-            }
-
-            if(cb) imp.wakeup(0, function() { cb(err, data, decodedData); });
-        }.bindenv(this));
+                
+                local decodedData = null;
+                local err = null;
+                try {
+                    
+                    // Try to decode the data as a single entry
+                    decodedData = [ http.jsondecode(data) ];
+                    
+                } catch (ex) {
+                    
+                    // Decode this as a multiple line response
+                    try {
+                        decodedData = split(data, "\n\r");
+                        foreach (index, response in decodedData) {
+                            decodedData[index] = http.jsondecode(response);
+                        }
+                    } catch (ex) {
+                        err = ex;
+                        decodedData = null;
+                    }
+                }
+    
+                if(cb) imp.wakeup(0, function() { cb(err, data, decodedData); });
+            }.bindenv(this),
+            
+            NO_TIMEOUT
+        
+        );
     }
 }
