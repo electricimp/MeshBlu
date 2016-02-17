@@ -1,6 +1,10 @@
+// Copyright (c) 2016 Electric Imp
+// This file is licensed under the MIT License
+// http://opensource.org/licenses/MIT
+
 class Meshblu {
 
-    static version = [1, 0, 0];
+    static version = [1, 1, 0];
 
     static NO_CREDENTIALS_ERR = "Meshblu Credentials Missing";
     static CREDENTIALS_ERR = "Device already has Meshblu Credentials";
@@ -27,7 +31,7 @@ class Meshblu {
     // Register a device with Meshblu (only if no credentials passed in)
     function registerDevice(cb) {
         // Ensure we're not registered
-        if(_deviceRegistered() ) {
+        if (_deviceRegistered() ) {
             imp.wakeup(0, function() { cb(Meshblu.CREDENTIALS_ERR, null, null); });
             return;
         }
@@ -56,7 +60,7 @@ class Meshblu {
             }
 
             // check that credentials were returned
-            if("uuid" in data && "token" in data) {
+            if ("uuid" in data && "token" in data) {
                 _updateLocalCredentials(data.uuid, data.token);
             } else {
                 err = "Credentials not sent";
@@ -70,7 +74,7 @@ class Meshblu {
     // Gets this device info
     function getDeviceInfo(uuid, cb) {
         // Ensure we're registered
-        if(!_deviceRegistered()) {
+        if (!_deviceRegistered()) {
             imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
             return;
         }
@@ -99,7 +103,7 @@ class Meshblu {
     // Delete device from meshblu network
     function deleteDevice(cb = null) {
         // Ensure we're registered
-        if( !_deviceRegistered() ) {
+        if ( !_deviceRegistered() ) {
             if (cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
             return;
         }
@@ -121,20 +125,20 @@ class Meshblu {
 
             // check status code
             if (resp.statuscode != 200) {
-                err = (format("Could not delete device (%s)", resp.statuscode.tostring()));
-                if(cb) imp.wakeup(0, function() { cb(err, resp, data); });
+                err = format("Could not delete device (%d)", resp.statuscode);
+                if (cb) imp.wakeup(0, function() { cb(err, resp, data); });
                 return
             }
 
             _removeLocalCredentials();
-            if(cb) imp.wakeup(0, function() { cb(err, resp, data); });
+            if (cb) imp.wakeup(0, function() { cb(err, resp, data); });
         }.bindenv(this));
 
     }
 
     function getLocalDevices(cb) {
         // Ensure we're registered
-        if( !_deviceRegistered() ) {
+        if ( !_deviceRegistered() ) {
             imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
             return;
         }
@@ -155,49 +159,48 @@ class Meshblu {
     // data should be in key:value pairs
     function storeData(devData, cb = null) {
         // Ensure we're registered
-        if( !_deviceRegistered() ) {
-            if(cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
+        if ( !_deviceRegistered() ) {
+            if (cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
             return;
         }
         local url = format("%s/data/%s", _baseUrl, _uuid);
         local request = http.post(url, _headers, http.jsonencode(devData));
 
         request.sendasync(function(resp) {
+            
             local err = null;
-
             if (resp.statuscode != 201) {
-                err = format("Could not store data (%s)", resp.statuscode.tostring());
-                if(cb) imp.wakeup(0, function() { cb(err, resp, resp.body); });
-            } else {
-                if(cb) imp.wakeup(0, function() { cb(null, resp, resp.body); });
+                err = format("Could not store data (%d)", resp.statuscode);
             }
+            if (cb) imp.wakeup(0, function() { cb(null, resp, resp.body); });
+            
         }.bindenv(this));
     }
 
     // TODO: add query params
     function getData(uuid, cb, stream = false) {
         // Ensure we're registered
-        if( !_deviceRegistered() ) {
+        if ( !_deviceRegistered() ) {
             imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
             return;
         }
 
         local url = format("%s/data/%s", _baseUrl, uuid);
-        if(stream) { url = format("%s/data/%s?stream=true", _baseUrl, uuid); }
+        if (stream) { url = format("%s/data/%s?stream=true", _baseUrl, uuid); }
         local request = http.get(url, _headers);
         _sendRequest(request, cb);
     }
 
     // must be subscribed to get data stream
-    function getStreamingData(uuid) {
-        getData(uuid, null, true);
+    function getStreamingData(uuid, cb = null) {
+        getData(uuid, cb, true);
     }
 
     // Send a message to a specific device, array of devices, or all devices subscribing to a UUID on the Meshblu platform
     function sendMessage(device, message, cb = null) {
         // Ensure we're registered
-        if( !_deviceRegistered() ) {
-            if(cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
+        if ( !_deviceRegistered() ) {
+            if (cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
             return;
         }
 
@@ -210,23 +213,23 @@ class Meshblu {
     // subscribe to device
     function subscribe(uuid, cb, filter=null) {
         // Ensure we're registered
-        if( !_deviceRegistered() ) {
-            if(cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
+        if ( !_deviceRegistered() ) {
+            if (cb) imp.wakeup(0, function() { cb(Meshblu.NO_CREDENTIALS_ERR, null, null); });
             return;
         }
 
         local url = format("%s/subscribe/%s", _baseUrl, uuid);
-        if(filter) { url = format("%s/subscribe/%s%s", _baseUrl, uuid, filter); }
+        if (filter) { url = format("%s/subscribe/%s%s", _baseUrl, uuid, filter); }
 
         _openStream(url, cb);
     }
 
     // types (broadcast, received, sent, or [broadcast, received])
     function subscribeWithTypeFilter(uuid, types, cb) {
-        if(typeof types == "array") {
+        if (typeof types == "array") {
             local urlEncodedFilter = "?";
             foreach(index, item in types) {
-                if(index == 0) {
+                if (index == 0) {
                     urlEncodedFilter = format("%stypes=%s", urlEncodedFilter, item);
                 }else{
                     urlEncodedFilter = format("%s&types=%s", urlEncodedFilter, item);
@@ -266,10 +269,10 @@ class Meshblu {
     }
 
     function _updateProperties(newProps) {
-        if("uuid" in newProps) {
+        if ("uuid" in newProps) {
             _updateLocalCredentials(newProps.uuid, null);
         }
-        if("token" in newProps) {
+        if ("token" in newProps) {
             _updateLocalCredentials(null, newProps.token);
         }
         foreach (prop, val in newProps) {
@@ -277,20 +280,20 @@ class Meshblu {
         }
 
         // Delete the uuid & token credentials from the _properties table
-        _deleteCredentialsFromPropperties();
+        _deleteCredentialsFromProperties();
     }
 
-    function _deleteCredentialsFromPropperties() {
+    function _deleteCredentialsFromProperties() {
         _properties.rawdelete("uuid");
         _properties.rawdelete("token");
     }
 
     function _updateLocalCredentials(uuid, token) {
-        if(uuid) {
+        if (uuid) {
             _uuid = uuid;
             _headers.meshblu_auth_uuid <- _uuid;
         }
-        if(token) {
+        if (token) {
             _token = token;
             _headers.meshblu_auth_token <- _token;
         }
@@ -311,49 +314,73 @@ class Meshblu {
             try {
                 data = http.jsondecode(resp.body);
             } catch (ex) {
-                if(cb) imp.wakeup(0, function() { cb(ex, resp, null); });
+                if (cb) imp.wakeup(0, function() { cb(ex, resp, null); });
                 return
             }
 
             if (resp.statuscode != statusCode) {
                 local err = format("%s (%s)", RESP_ERR, resp.statuscode.tostring());
-                if(cb) imp.wakeup(0, function() { cb(err, resp, data); });
+                if (cb) imp.wakeup(0, function() { cb(err, resp, data); });
                 return
             }
 
-            if(cb) imp.wakeup(0, function() { cb(err, resp, data); });
+            if (cb) imp.wakeup(0, function() { cb(err, resp, data); });
         }.bindenv(this));
     }
 
-    function _openStream(url, cb, reconnect=true, streamingRetryTimeout = 10.0) {
-        if(_streamingRequest != null) {
+    function _openStream(url, cb, reconnect=true) {
+        if (_streamingRequest != null) {
             _streamingRequest.cancel();
             _streamingRequest = null;
         }
+        
         _streamingRequest = http.get(url, _headers);
-
-        _streamingRequest.sendasync(function(resp) {
-            if (reconnect) { _openStream(url, cb, true); }
-        }.bindenv(this), function(data) {
-            local decodedData = null;
-            local err = null;
-
-            try {
-                decodedData = http.jsondecode(data);
-            } catch (ex) {
-                // if stream listening to multiple subscribe types
-                // data includes multiple responses separated by a new line
-                try {
-                    decodedData = split(data, "\n\r");
-                    foreach(index, response in decodedData) {
-                        decodedData[index] = http.jsondecode(response);
-                    }
-                } catch (ex) {
-                    err = ex;
+        _streamingRequest.sendasync(
+            
+            // The final HTTP stream handler
+            function (resp) {
+                if (reconnect) {
+                    local delay = (resp.statuscode >= 400) ? 1 : 0;
+                    imp.wakeup(delay, function() {
+                        _openStream(url, cb, reconnect); 
+                    }.bindenv(this));
                 }
-            }
+            }.bindenv(this), 
+            
+            // The interim HTTP stream data handler
+            function (data) {
 
-            if(cb) imp.wakeup(0, function() { cb(err, data, decodedData); });
-        }.bindenv(this));
+                // Skip over HTML as it's an error message                
+                if (data.find("<html>") == 0) {
+                    return;
+                }
+                
+                local decodedData = null;
+                local err = null;
+                try {
+                    
+                    // Try to decode the data as a single entry
+                    decodedData = [ http.jsondecode(data) ];
+                    
+                } catch (ex) {
+                    
+                    // Decode this as a multiple line response
+                    try {
+                        decodedData = split(data, "\n\r");
+                        foreach (index, response in decodedData) {
+                            decodedData[index] = http.jsondecode(response);
+                        }
+                    } catch (ex) {
+                        err = ex;
+                        decodedData = null;
+                    }
+                }
+    
+                if (cb) imp.wakeup(0, function() { cb(err, data, decodedData); });
+            }.bindenv(this),
+            
+            NO_TIMEOUT
+        
+        );
     }
 }

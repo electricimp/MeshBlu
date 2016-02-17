@@ -1,10 +1,10 @@
-# Meshblu v1.0.0
+# Meshblu v1.1.0
 
 [Meshblu](https://meshblu-http.readme.io/docs/getting-started) is a machine-to-machine instant messaging network and API.
 
-**To add this library to your project, add `#require "Meshblu.class.nut:1.0.0"` to the top of your device code.**
+**To add this library to your project, add `#require "Meshblu.class.nut:1.1.0"` to the top of your device code.**
 
-You can view the library’s source code on [GitHub](https://github.com/electricimp/Meshblu/tree/v1.0.0).
+You can view the library’s source code on [GitHub](https://github.com/electricimp/Meshblu/tree/v1.1.0).
 
 ## Class Usage
 
@@ -271,6 +271,7 @@ meshblu.sendMessage("*", "hello world", function(err, response, data) {
 
 ### subscribe(*uuid, cb*)
 The *subscribe* method opens a stream that returns messages as they are sent and received from the uuid specified.
+The *data* returned is an array of events.
 
 ```squirrel
 meshblu.subscribe("b11f10f4-4093-4a29-afe3-ca27970b2725", function(err, response, data) {
@@ -286,6 +287,7 @@ meshblu.subscribe("b11f10f4-4093-4a29-afe3-ca27970b2725", function(err, response
 
 ### subscribeWithTypeFilter(*uuid, types, cb*)
 The *subscribeWithTypeFilter* method opens a stream that returns messages as they are sent, received, and/or broadcast from the uuid specified.
+The *data* returned is an array of events.
 
 ```squirrel
 meshblu.subscribeWithTypeFilter("b11f10f4-4093-4a29-afe3-ca27970b2725", "received", function(err, response, data) {
@@ -294,8 +296,11 @@ meshblu.subscribeWithTypeFilter("b11f10f4-4093-4a29-afe3-ca27970b2725", "receive
         return;
     }
 
-    server.log(data.fromUuid);
-    server.log(http.jsonencode(data.payload));
+    foreach (event in data) {
+        if ("payload" in event) {
+            server.log(event.fromUuid + " says: " + http.jsonencode(event.payload));
+        }
+    }
 });
 ```
 
@@ -315,4 +320,4 @@ meshblu.getNetworkStatus(function(err, response, data) {
 
 # License
 
-Meshblu is licensed under [MIT License](https://github.com/electricimp/meshblu/tree/master/LICENSE).
+Meshblu is licensed under [MIT License](./LICENSE).
