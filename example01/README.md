@@ -3,6 +3,8 @@
 Login or Register with [octoblu.com](https://app.octoblu.com/login). 
 Import the [Electric Imp Meshblu Demo](https://app.octoblu.com/bluprints/import/eda685c4-986d-4b6f-a958-f50857e21461) bluprint.
 
+<img src="bluprint.png">
+
 ### Connect Device to Account
 
 Navigate to [Things](https://app.octoblu.com/things). At the top of the Things page, click **claim your device manually**. Enter a name for your device, the **uuid** and **token** from the IDE logs.
