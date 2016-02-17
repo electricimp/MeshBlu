@@ -3,20 +3,12 @@
 
 // Store reading to Meshblu
 function postReading(reading) {
-    // Note: reading is the data passed from the device, ie.
-    // a Squirrel table with the keys 'temp' & 'humid'
+    // Note: reading is the data passed from the device, 
+    // i.e. a Squirrel table with the keys 'temp' & 'humid'
+    meshblu.sendMessage("*", { "reading" : reading });
     meshblu.storeData(reading, function(err, response, data) {
-        if(err) {
-            server.log(err);
-            return;
-        }
-        if(data == "") {
-            server.log("Data Stored");
-        }
+        if (err) return server.error(err);
     });
-
-    // Log the readings locally
-    server.log(http.jsonencode(reading));
 }
 
 
@@ -32,22 +24,40 @@ function ready() {
 
     // Subscribe to messages for my device
     meshblu.subscribeWithTypeFilter(deviceData.uuid, ["received", "broadcast"], function(err, rawData, data) {
-        if (err) {
-            server.error(err);
-            return;
-        }
+        if (err) return server.error(err);
         
         if (typeof data == "array") {
             foreach (event in data) {
-                server.log(event.fromUuid + " says: " + http.jsonencode(event));
-
-                if("payload" in event && "readingInt" in event.payload) {
-                    device.send("readingInt", event.payload.readingInt);
+                if ("fromUuid" in event) {
+                    server.log(event.fromUuid + " says: " + http.jsonencode(event));
+                } else if ("error" in event) {
+                    server.error("Subscribe error: " + event.error);
+                    if (event.error == "Device not found") {
+                        resetDeviceData();
+                        server.restart();
+                    }
+                    return;
+                } else {
+                    return server.error("No fromUuid: " + http.jsonencode(event));
+                }
+    
+                // Look for a json encoded payload
+                if ("payload" in event && typeof event.payload == "string") {
+                    try {
+                        event.payload = http.jsondecode(event.payload);
+                    } catch (e) {
+                        // Don't worry, it's just not what we are looking for
+                    }
+                }
+                
+                // Look for a trigger with the new reading interval
+                if ("payload" in event && typeof event.payload == "table") {
+                    if ("readingInt" in event.payload) {
+                        device.send("readingInt", event.payload.readingInt);
+                    }
                 }
 
             }
-        } else {
-            server.error("Invalid event")
         }
 
     });
@@ -61,37 +71,59 @@ function ready() {
 }
 
 
+function loadDeviceData() {
+    // Get stored credentials
+    deviceData <- {};
+    local data = server.load();
+    foreach (key in ["uuid", "token"]) {
+        if (key in data) {
+            deviceData[key] <- data[key];
+        }
+    }
+}
+
+function saveDeviceData(uuid, token) {
+    // Update the stored credentials
+    deviceData.uuid <- uuid;
+    deviceData.token <- token;
+    server.save(deviceData);
+}
+
+function resetDeviceData() {
+    // Reset the stored credentials
+    delete deviceData.uuid;
+    delete deviceData.token;
+    server.save(deviceData);
+}
 
 // Set up some basic properties for Meshblu Device
-impID <- split(http.agenturl(), "/").pop();
 properties <- {
-    "impID" : impID,
+    "impID" : imp.configparams.deviceid,
     "platform" : "Electric Imp",
-    "online" : true,
-    "topic" : ["temperature", "humidity"]
+    "online" : true
 };
 
 // Create a Meshblu instance
 meshblu <- Meshblu(properties);
 
-// Get stored credentials
-deviceData <- server.load();
-
 // Register the device with meshblu or set local meshblu credentials
-if (!("uuid" in deviceData && "token" in deviceData)) {
+loadDeviceData();
+if ("uuid" in deviceData && "token" in deviceData) {
+    // Load the existing registration
+    meshblu.setDeviceCredentials(deviceData.uuid, deviceData.token);
+
+    // Done initialising, now start
+    ready();
+} else {
+    // Register a new device
     meshblu.registerDevice(function(err, response, data) {
-        if(err) {
-            server.log(err);
-            return;
-        }
+        if (err) return server.error(err);
+
         // you must store if you want to update device
-        deviceData.token <- data.token;
-        deviceData.uuid <- data.uuid;
-        server.save(deviceData);
+        saveDeviceData(data.uuid, data.token)
+
+        // Done initialising, now start
         ready();
     });
-} else {
-    meshblu.setDeviceCredentials(deviceData.uuid, deviceData.token);
-    ready();
 }
 
