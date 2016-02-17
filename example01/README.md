@@ -1,4 +1,6 @@
-## Octoblu Setup
+## Octoblu Demo Setup
+
+This demo requires an Electric Imp Environmental Sensor tail configured with the provided agent and device code. The code registers the device with Octoblu using the Meshblu protocol then begins to transmit data and messages to and from the Imp. The provided Bluprint demonstrates how to send and receive messages via Octoblu and convert them into a usable process flow.
 
 Login or Register with [octoblu.com](https://app.octoblu.com/login). 
 Import the [Electric Imp Meshblu Demo](https://app.octoblu.com/bluprints/import/eda685c4-986d-4b6f-a958-f50857e21461) bluprint.
